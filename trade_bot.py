@@ -2,6 +2,7 @@ import io
 import json
 import logging
 import os
+import re
 import threading
 from datetime import date
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -99,7 +100,24 @@ if not ALLOWED_USER_IDS:
 
 # Инициализация Gemini и Firestore
 client = genai.Client(api_key=GEMINI_API_KEY)
-firebase_admin.initialize_app(credentials.Certificate(json.loads(FIREBASE_CREDENTIALS)))
+
+
+def load_firebase_credentials(raw: str) -> dict:
+    """Читает JSON-ключ Firebase и чинит ключ, если при копировании
+    дефисы превратились в тире или переносы строк сломались."""
+    info = json.loads(raw.strip())
+    key = info.get("private_key", "").replace("\\n", "\n")
+    match = re.search(r"BEGIN PRIVATE KEY(.*?)END PRIVATE KEY", key, re.S)
+    if match:
+        body = re.sub(r"[^A-Za-z0-9+/=]", "", match.group(1))
+        lines = [body[i:i + 64] for i in range(0, len(body), 64)]
+        info["private_key"] = (
+            "-----BEGIN PRIVATE KEY-----\n" + "\n".join(lines) + "\n-----END PRIVATE KEY-----\n"
+        )
+    return info
+
+
+firebase_admin.initialize_app(credentials.Certificate(load_firebase_credentials(FIREBASE_CREDENTIALS)))
 db = firestore.client()
 trades_col = db.collection("trades")
 
