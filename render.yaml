@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: grey-trade-bot
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python trade_bot.py
+    envVars:
+      - key: TELEGRAM_TOKEN
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: FIREBASE_CREDENTIALS
+        sync: false
+      - key: ALLOWED_USER_IDS
+        sync: false
